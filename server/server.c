@@ -1,93 +1,66 @@
-#include <asm-generic/socket.h>
+#include <ctype.h>
 #include <limits.h>
 #include <netdb.h>
-#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
-#include <unistd.h>
 
-#define BACKLOG 10
-
-int main(int argc, char **argv)
+// totally not needed argument checker for this little demo project
+void check_args(int argc, char *argv[])
 {
+
     if (argc != 2)
     {
-        fprintf(stderr, "usage: server <port>\n");
-        return 1;
+        fprintf(stderr, "usage: %s <port>\n", argv[0]);
+        exit(1);
     }
 
-    char *badchar;
-    char *port_s = argv[1];
-    unsigned long port_l = strtoul(port_s, &badchar, 10);
+    char *endptr;
+    long temp_port = strtol(argv[1], &endptr, 10);
 
-    if (port_l > USHRT_MAX)
+    if (*endptr != '\0')
     {
-        fprintf(stderr, "Port can't be bigger then 2^16\n");
-        return 1;
+        fprintf(stderr, "invalid character found in port: %c\n", *endptr);
+        exit(1);
     }
 
-    if (*badchar != '\0')
+    if (temp_port < 0)
     {
-        fprintf(stderr, "invalid character: %c\n", *badchar);
-        return 1;
+        fprintf(stderr, "port can't be negative number\n");
+        exit(1);
     }
 
-    struct addrinfo *servinfo, hints, *p;
-    struct sockaddr_storage their_addr;
-    int rv;
-    int sockfd, new_fd;
-    int yes = 1;
-    char s[INET6_ADDRSTRLEN];
-    socklen_t sin_size;
-    struct sigaction sa;
+    if (temp_port > USHRT_MAX)
+    {
+        fprintf(stderr, "port can't be bigger then 2^16\n");
+        exit(1);
+    }
+
+    while (isspace(*argv[1]))
+    {
+        argv[1]++;
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    check_args(argc, argv);
+    char *port = argv[1];
+
+    int status;
+    struct addrinfo hints;
+    struct addrinfo *servinfo;
 
     memset(&hints, 0, sizeof hints);
-
     hints.ai_family = AF_INET;       // IPv4
     hints.ai_socktype = SOCK_STREAM; // TCP
-    hints.ai_flags = AI_PASSIVE;     // host ip
+    hints.ai_flags = AI_PASSIVE;     // my ip
+    //
 
-    if ((rv = getaddrinfo(NULL, port_s, &hints, &servinfo)) != 0)
+    if ((status = getaddrinfo(NULL, port, &hints, &servinfo)) != 0)
     {
-        fprintf(stderr, "getaddrinfo: %s\n", gai_strerror(rv));
-    }
-
-    for (p = servinfo; p != NULL; p = p->ai_next)
-    {
-        if ((sockfd = socket(p->ai_family, p->ai_socktype, p->ai_protocol)) == -1)
-        {
-            perror("server: socket\n");
-            continue;
-        }
-
-        if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &yes, sizeof(int)) == -1)
-        {
-            perror("server: setsockopt\n");
-            return 1;
-        }
-
-        if (bind(sockfd, p->ai_addr, p->ai_addrlen) == -1)
-        {
-            close(sockfd);
-            perror("server: bind\n");
-            continue;
-        }
-    }
-
-    if (p == NULL)
-    {
-        fprintf(stderr, "server failed to bind\n");
-        return -1;
-    }
-
-    freeaddrinfo(servinfo);
-
-    if (listen(sockfd, BACKLOG) == -1)
-    {
-        perror("server: listen\n");
-        return -1;
+        fprintf(stderr, "gai error: %s\n", gai_strerror(status));
     }
 
     return 0;
