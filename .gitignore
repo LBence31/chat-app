@@ -1,7 +1,5 @@
-*
-!*/
-!*.*
-
-!makefile
 compile_commands.json
 .cache
+.clang-format
+server.out
+client.out
