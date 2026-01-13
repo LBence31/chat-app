@@ -1,4 +1,4 @@
- CLI Chat App
+# CLI Chat App
 
 _Simple CLI Chat room server and client to demonstrate sockets_
 
