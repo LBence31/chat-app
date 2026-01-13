@@ -12,8 +12,6 @@
 #include <sys/socket.h>
 #include <unistd.h>
 
-#define BACKLOG 10 // queue for accept
-
 // totally not needed argument checker for this little demo project
 void check_args(int argc, char *argv[])
 {
